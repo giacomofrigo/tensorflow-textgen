@@ -99,6 +99,7 @@ def train():
 
     history = model.fit(dataset, epochs=EPOCHS, callbacks=[checkpoint_callback, epochs_stats_callback])
 
+    model.summary()
 
 if __name__ == '__main__':
     train()
