@@ -135,7 +135,7 @@ def train(args):
     optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
 
 
-    model.compile(optimizer='adam', loss=loss, metrics=['accuracy'])
+    model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
 
     # Name of the checkpoint files
     checkpoint_prefix = os.path.join(args.save_dir, "ckpt_{epoch}")
