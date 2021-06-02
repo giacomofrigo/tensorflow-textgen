@@ -20,6 +20,7 @@ def train():
     RNN_UNITS = 256
     CHECKPOINT_DIR = "save"
     EPOCHS = 2
+    VALIDATION_SPLIT = 0.1
 
     os.system("rm -rf save")
     os.system("mkdir save")
@@ -79,6 +80,18 @@ def train():
             .batch(BATCH_SIZE, drop_remainder=True)
             .prefetch(tf.data.experimental.AUTOTUNE))
 
+    # split dataset into validation and train
+    # get dataset length
+
+    dataset_length = tf.data.experimental.cardinality(dataset).numpy()
+    validation_size = int(VALIDATION_SPLIT * dataset_length)
+
+    assert validation_size > 1, "dataset too small"
+
+    train_dataset = dataset.take(dataset_length-validation_size)
+    validation_dataset = dataset.skip(dataset_length-validation_size)
+
+
     model = Model(
         # Be sure the vocabulary size matches the `StringLookup` layers.
         vocab_size=len(ids_from_chars.get_vocabulary()),
@@ -97,7 +110,10 @@ def train():
 
     epochs_stats_callback = EpochsStatsCallback(CHECKPOINT_DIR, settings)
 
-    history = model.fit(dataset, epochs=EPOCHS, callbacks=[checkpoint_callback, epochs_stats_callback])
+
+    history = model.fit(train_dataset, epochs=EPOCHS, callbacks=[checkpoint_callback, epochs_stats_callback])
+
+    evaluation = model.evaluate(validation_dataset, callbacks=[epochs_stats_callback])
 
     model.summary()
 
