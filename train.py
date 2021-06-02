@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument("input_file", type=str, default="data/shakespeare/input.txt")
 parser.add_argument('--save_dir', type=str, default='save',
                     help='directory to store checkpointed models and model configuration')
-parser.add_argument('--log_dir', type=str, default='logs',
+parser.add_argument('--log_dir', type=str, default='{save_dir}/logs',
                     help='directory to store tensorflow logs, that can be used for tensorboard')
 parser.add_argument('--validation_split', type=int, default=0.1,
                     help='dimension of the validation set (in batches)')
@@ -41,7 +41,7 @@ parser.add_argument('--batch_size', type=int, default=64,
                             commonly in the range 10-500.""")
 parser.add_argument('--num_epochs', type=int, default=50,
                     help='number of epochs. Number of full passes through the training examples.')
-parser.add_argument('--learning_rate', type=float, default=0.001,
+parser.add_argument('--learning_rate', type=float, default=0.002,
                     help='learning rate')
 parser.add_argument('--dropout', type=float, default=0.1,
                     help='probability of keeping weights in the hidden layer')
@@ -51,10 +51,11 @@ args = parser.parse_args()
 
 def train(args):
 
-    os.system("rm -rf save")
-    os.system("mkdir save")
+    if os.path.isdir(args.save_dir):
+        os.system("rm -rf {}".format(args.save_dir))
+    os.system("mkdir {}".format(args.save_dir))
 
-
+    args.log_dir = args.save_dir + "/logs"
 
     # Read, then decode for py2 compat.
     assert os.path.isfile(args.input_file), "no file {} was found".format(args.input_file)

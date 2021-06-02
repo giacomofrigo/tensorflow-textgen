@@ -27,7 +27,7 @@ class EpochsStatsCallback(tf.keras.callbacks.Callback):
         one_step_model = OneStep(self.model, chars_from_ids, ids_from_chars, temperature=1)
 
         states = None
-        next_char = tf.constant(['ROMEO:'])
+        next_char = tf.constant(['Ultima ora:'])
         result = [next_char]
 
         for n in range(500):
