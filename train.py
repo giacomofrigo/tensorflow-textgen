@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 
@@ -7,21 +8,50 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 from tensorflow.keras.layers.experimental import preprocessing
 
-import numpy as np
-import time
 
 from Model import Model
 
 
-def train():
-    PATH_TO_FILE = "data/shakespeare/input.txt"
-    SEQ_LENGTH = 100
-    EMBEDDING_DIM = 256
-    RNN_UNITS = 256
-    CHECKPOINT_DIR = "save"
-    EPOCHS = 2
-    VALIDATION_SPLIT = 0.1
-    DROPOUT = 0
+
+
+parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+# Data and model checkpoints directories
+parser.add_argument("input_file", type=str, default="data/shakespeare/input.txt")
+parser.add_argument('--save_dir', type=str, default='save',
+                    help='directory to store checkpointed models and model configuration')
+parser.add_argument('--validation_split', type=int, default=0.1,
+                    help='dimension of the validation set (in batches)')
+# Model params
+parser.add_argument('--embedding_dim', type=int, default=256,
+                    help='Dimension of the embedding layer which is the input layer. '
+                         'A trainable lookup table that will map each character-ID to a vector with args.embedding_dim dimensions')
+parser.add_argument('--rnn_units', type=int, default=256,
+                    help='size of RNN hidden state')
+parser.add_argument('--num_layers', type=int, default=1,
+                    help='number of layers in the RNN')
+# Optimization
+parser.add_argument('--seq_length', type=int, default=100,
+                    help='RNN sequence length. Number of timesteps to unroll for.')
+parser.add_argument('--batch_size', type=int, default=64,
+                    help="""minibatch size. Number of sequences propagated through the network in parallel.
+                            Pick batch-sizes to fully leverage the GPU (e.g. until the memory is filled up)
+                            commonly in the range 10-500.""")
+parser.add_argument('--num_epochs', type=int, default=50,
+                    help='number of epochs. Number of full passes through the training examples.')
+parser.add_argument('--learning_rate', type=float, default=0.001,
+                    help='learning rate')
+parser.add_argument('--dropout', type=float, default=0.1,
+                    help='probability of keeping weights in the hidden layer')
+args = parser.parse_args()
+
+
+
+
+
+
+
+def train(args):
 
     os.system("rm -rf save")
     os.system("mkdir save")
@@ -29,7 +59,8 @@ def train():
 
 
     # Read, then decode for py2 compat.
-    text = open(PATH_TO_FILE, 'rb').read().decode(encoding='utf-8')
+    assert os.path.isfile(args.input_file), "no file {} was found".format(args.input_file)
+    text = open(args.input_file, 'rb').read().decode(encoding='utf-8')
 
     # The unique characters in the file
     vocab = sorted(set(text))
@@ -39,14 +70,14 @@ def train():
 
     # EXPORT MODEL CONFIG
     settings = {
-        'seq_length': SEQ_LENGTH,
-        'embedding_dim': EMBEDDING_DIM,
-        'rnn_units': RNN_UNITS,
+        'seq_length': args.seq_length,
+        'embedding_dim': args.embedding_dim,
+        'rnn_units': args.rnn_units,
         'vocab': ids_from_chars.get_vocabulary()
     }
 
-    with open(os.path.join(CHECKPOINT_DIR, "config.json"), "w") as settings_file:
-        print("exporting config file", os.path.join(CHECKPOINT_DIR, "config.json"))
+    with open(os.path.join(args.save_dir, "config.json"), "w") as settings_file:
+        print("exporting config file", os.path.join(args.save_dir, "config.json"))
         json.dump(settings, settings_file)
 
 
@@ -55,9 +86,9 @@ def train():
 
     ids_dataset = tf.data.Dataset.from_tensor_slices(all_ids)
 
-    examples_per_epoch = len(text) // (SEQ_LENGTH + 1)
+    examples_per_epoch = len(text) // (args.seq_length + 1)
 
-    sequences = ids_dataset.batch(SEQ_LENGTH + 1, drop_remainder=True)
+    sequences = ids_dataset.batch(args.seq_length + 1, drop_remainder=True)
 
     def split_input_target(sequence):
         input_text = sequence[:-1]
@@ -85,7 +116,7 @@ def train():
     # get dataset length
 
     dataset_length = tf.data.experimental.cardinality(dataset).numpy()
-    validation_size = int(VALIDATION_SPLIT * dataset_length)
+    validation_size = int(args.validation_split * dataset_length)
 
     assert validation_size > 1, "dataset too small"
 
@@ -96,28 +127,28 @@ def train():
     model = Model(
         # Be sure the vocabulary size matches the `StringLookup` layers.
         vocab_size=len(ids_from_chars.get_vocabulary()),
-        embedding_dim=EMBEDDING_DIM,
-        rnn_units=RNN_UNITS,
-        dropout=DROPOUT)
+        embedding_dim=args.embedding_dim,
+        rnn_units=args.rnn_units,
+        dropout=args.dropout)
 
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
+
+
     model.compile(optimizer='adam', loss=loss, metrics=['accuracy'])
 
     # Name of the checkpoint files
-    checkpoint_prefix = os.path.join(CHECKPOINT_DIR, "ckpt_{epoch}")
+    checkpoint_prefix = os.path.join(args.save_dir, "ckpt_{epoch}")
 
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_prefix,
         save_weights_only=True)
 
-    epochs_stats_callback = EpochsStatsCallback(CHECKPOINT_DIR, settings)
+    epochs_stats_callback = EpochsStatsCallback(args.save_dir, settings)
 
-
-    history = model.fit(train_dataset, epochs=EPOCHS, callbacks=[checkpoint_callback, epochs_stats_callback])
-
-    evaluation = model.evaluate(validation_dataset, callbacks=[epochs_stats_callback])
+    history = model.fit(train_dataset, validation_data=validation_dataset, epochs=args.num_epochs, callbacks=[checkpoint_callback, epochs_stats_callback])
 
     model.summary()
 
 if __name__ == '__main__':
-    train()
+    train(args)
