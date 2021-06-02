@@ -127,6 +127,7 @@ def train(args):
         vocab_size=len(ids_from_chars.get_vocabulary()),
         embedding_dim=args.embedding_dim,
         rnn_units=args.rnn_units,
+        n_layers=args.num_layers,
         dropout=args.dropout)
 
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
