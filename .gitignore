@@ -1,6 +1,4 @@
 save*
 .idea
 _*
-data
-!data/shakespeare
 /log/
