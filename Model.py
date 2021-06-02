@@ -1,15 +1,17 @@
 import tensorflow as tf
 
 class Model(tf.keras.Model):
-  def __init__(self, vocab_size, embedding_dim, rnn_units, n_layers = 2):
+  def __init__(self, vocab_size, embedding_dim, rnn_units, n_layers = 2, dropout = 0):
     super().__init__(self)
     self.n_layers=n_layers
+    self.dropout = dropout
 
     self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
 
     self.rnn_layers = [tf.keras.layers.GRU(rnn_units,
                                    return_sequences=True,
-                                   return_state=True) for layer in range (n_layers)]
+                                   return_state=True,
+                                   dropout=dropout) for layer in range (n_layers)]
 
     self.dense = tf.keras.layers.Dense(vocab_size)
 

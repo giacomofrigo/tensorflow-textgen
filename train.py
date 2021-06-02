@@ -21,6 +21,7 @@ def train():
     CHECKPOINT_DIR = "save"
     EPOCHS = 2
     VALIDATION_SPLIT = 0.1
+    DROPOUT = 0
 
     os.system("rm -rf save")
     os.system("mkdir save")
@@ -96,7 +97,8 @@ def train():
         # Be sure the vocabulary size matches the `StringLookup` layers.
         vocab_size=len(ids_from_chars.get_vocabulary()),
         embedding_dim=EMBEDDING_DIM,
-        rnn_units=RNN_UNITS)
+        rnn_units=RNN_UNITS,
+        dropout=DROPOUT)
 
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
     model.compile(optimizer='adam', loss=loss, metrics=['accuracy'])
