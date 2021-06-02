@@ -20,6 +20,8 @@ parser = argparse.ArgumentParser(
 parser.add_argument("input_file", type=str, default="data/shakespeare/input.txt")
 parser.add_argument('--save_dir', type=str, default='save',
                     help='directory to store checkpointed models and model configuration')
+parser.add_argument('--log_dir', type=str, default='logs',
+                    help='directory to store tensorflow logs, that can be used for tensorboard')
 parser.add_argument('--validation_split', type=int, default=0.1,
                     help='dimension of the validation set (in batches)')
 # Model params
@@ -44,10 +46,6 @@ parser.add_argument('--learning_rate', type=float, default=0.001,
 parser.add_argument('--dropout', type=float, default=0.1,
                     help='probability of keeping weights in the hidden layer')
 args = parser.parse_args()
-
-
-
-
 
 
 
@@ -146,7 +144,9 @@ def train(args):
 
     epochs_stats_callback = EpochsStatsCallback(args.save_dir, settings)
 
-    history = model.fit(train_dataset, validation_data=validation_dataset, epochs=args.num_epochs, callbacks=[checkpoint_callback, epochs_stats_callback])
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=args.log_dir, histogram_freq=1)
+
+    history = model.fit(train_dataset, validation_data=validation_dataset, epochs=args.num_epochs, callbacks=[checkpoint_callback, epochs_stats_callback, tensorboard_callback])
 
     model.summary()
 
