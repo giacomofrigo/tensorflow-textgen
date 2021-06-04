@@ -24,7 +24,7 @@ parser.add_argument('--log_dir', type=str, default='{save_dir}/logs',
                     help='directory to store tensorflow logs, that can be used for tensorboard')
 parser.add_argument('--validation_split', type=int, default=0.1,
                     help='dimension of the validation set (in batches)')
-# Model params
+
 parser.add_argument('--embedding_dim', type=int, default=256,
                     help='Dimension of the embedding layer which is the input layer. '
                          'A trainable lookup table that will map each character-ID to a vector with args.embedding_dim dimensions')
@@ -32,7 +32,6 @@ parser.add_argument('--rnn_units', type=int, default=256,
                     help='size of RNN hidden state')
 parser.add_argument('--num_layers', type=int, default=1,
                     help='number of layers in the RNN')
-# Optimization
 parser.add_argument('--seq_length', type=int, default=100,
                     help='RNN sequence length. Number of timesteps to unroll for.')
 parser.add_argument('--batch_size', type=int, default=64,
@@ -60,6 +59,7 @@ def train(args):
     # Read, then decode for py2 compat.
     assert os.path.isfile(args.input_file), "no file {} was found".format(args.input_file)
     text = open(args.input_file, 'rb').read().decode(encoding='utf-8')
+    val_text = open("data/lercio/validation.txt", 'rb').read().decode(encoding='utf-8')
 
     # The unique characters in the file
     vocab = sorted(set(text))
@@ -82,12 +82,15 @@ def train(args):
 
 
     all_ids = ids_from_chars(tf.strings.unicode_split(text, 'UTF-8'))
+    val_all_ids = ids_from_chars(tf.strings.unicode_split(val_text, 'UTF-8'))
 
     ids_dataset = tf.data.Dataset.from_tensor_slices(all_ids)
+    val_ids_dataset = tf.data.Dataset.from_tensor_slices(val_all_ids)
 
     examples_per_epoch = len(text) // (args.seq_length + 1)
 
     sequences = ids_dataset.batch(args.seq_length + 1, drop_remainder=True)
+    val_sequences = val_ids_dataset.batch(args.seq_length + 1, drop_remainder=True)
 
     def split_input_target(sequence):
         input_text = sequence[:-1]
@@ -95,6 +98,7 @@ def train(args):
         return input_text, target_text
 
     dataset = sequences.map(split_input_target)
+    val_dataset = val_sequences.map(split_input_target)
 
     # Batch size
     BATCH_SIZE = 64
@@ -111,16 +115,24 @@ def train(args):
             .batch(BATCH_SIZE, drop_remainder=True)
             .prefetch(tf.data.experimental.AUTOTUNE))
 
+    val_dataset = (
+        val_dataset
+            .shuffle(BUFFER_SIZE)
+            .batch(BATCH_SIZE, drop_remainder=True)
+            .prefetch(tf.data.experimental.AUTOTUNE))
+
     # split dataset into validation and train
     # get dataset length
 
     dataset_length = tf.data.experimental.cardinality(dataset).numpy()
     validation_size = int(args.validation_split * dataset_length)
 
-    assert validation_size > 1, "dataset too small"
+    #assert validation_size > 1, "dataset too small"
 
-    train_dataset = dataset.take(dataset_length-validation_size)
-    validation_dataset = dataset.skip(dataset_length-validation_size)
+    #train_dataset = dataset.take(dataset_length-validation_size)
+    train_dataset = dataset
+    #validation_dataset = dataset.skip(dataset_length-validation_size)
+    validation_dataset = val_dataset
 
 
     model = Model(

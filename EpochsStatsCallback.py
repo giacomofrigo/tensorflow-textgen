@@ -47,5 +47,5 @@ class EpochsStatsCallback(tf.keras.callbacks.Callback):
     def on_train_end(self, logs=None):
 
         with open(os.path.join(self.save_dir, "result.json"), "w") as evolution_file:
-            json.dump(self.result_to_save, evolution_file)
+            json.dump(self.result_to_save, evolution_file, indent=4)
 
