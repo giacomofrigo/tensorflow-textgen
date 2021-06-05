@@ -108,7 +108,7 @@ def train(args):
         val_dataset = val_sequences.map(split_input_target)
 
     # Batch size
-    BATCH_SIZE = 64
+    BATCH_SIZE = args.batch_size
 
     # Buffer size to shuffle the dataset
     # (TF data is designed to work with possibly infinite sequences,
