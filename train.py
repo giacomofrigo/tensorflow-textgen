@@ -25,7 +25,7 @@ parser.add_argument('--log_dir', type=str, default='{save_dir}/logs',
 parser.add_argument('--validation_split', type=int, default=0.1,
                     help='dimension of the validation set (in batches)')
 
-parser.add_argument('--embedding_dim', type=int, default=256,
+parser.add_argument('--embedding_dim', type=int, default=128,
                     help='Dimension of the embedding layer which is the input layer. '
                          'A trainable lookup table that will map each character-ID to a vector with args.embedding_dim dimensions')
 parser.add_argument('--rnn_units', type=int, default=256,
