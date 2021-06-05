@@ -11,7 +11,7 @@ from tensorflow.keras.layers.experimental import preprocessing
 
 from Model import Model
 
-
+#docker run --gpus=all -it --rm -v /$PWD:/tmp -w /tmp -p 6006:6006 tensorflow/tensorflow:latest-gpu
 
 
 parser = argparse.ArgumentParser(
@@ -22,8 +22,8 @@ parser.add_argument('--save_dir', type=str, default='save',
                     help='directory to store checkpointed models and model configuration')
 parser.add_argument('--log_dir', type=str, default='{save_dir}/logs',
                     help='directory to store tensorflow logs, that can be used for tensorboard')
-parser.add_argument('--validation_split', type=int, default=0.1,
-                    help='dimension of the validation set (in batches)')
+parser.add_argument('--validation_file', type=str,
+                    help='validation dataset. if passed the model is tested on the validation dataset at the end of each epoch')
 
 parser.add_argument('--embedding_dim', type=int, default=128,
                     help='Dimension of the embedding layer which is the input layer. '
@@ -44,6 +44,7 @@ parser.add_argument('--learning_rate', type=float, default=0.002,
                     help='learning rate')
 parser.add_argument('--dropout', type=float, default=0.1,
                     help='probability of keeping weights in the hidden layer')
+
 args = parser.parse_args()
 
 
@@ -59,7 +60,8 @@ def train(args):
     # Read, then decode for py2 compat.
     assert os.path.isfile(args.input_file), "no file {} was found".format(args.input_file)
     text = open(args.input_file, 'rb').read().decode(encoding='utf-8')
-    val_text = open("data/lercio/validation.txt", 'rb').read().decode(encoding='utf-8')
+    if args.validation_file is not None:
+        val_text = open("data/lercio/validation.txt", 'rb').read().decode(encoding='utf-8')
 
     # The unique characters in the file
     vocab = sorted(set(text))
@@ -72,7 +74,8 @@ def train(args):
         'seq_length': args.seq_length,
         'embedding_dim': args.embedding_dim,
         'rnn_units': args.rnn_units,
-        'vocab': ids_from_chars.get_vocabulary()
+        'vocab': ids_from_chars.get_vocabulary(),
+        'val_file': args.validation_file
     }
 
     with open(os.path.join(args.save_dir, "config.json"), "w") as settings_file:
@@ -82,15 +85,18 @@ def train(args):
 
 
     all_ids = ids_from_chars(tf.strings.unicode_split(text, 'UTF-8'))
-    val_all_ids = ids_from_chars(tf.strings.unicode_split(val_text, 'UTF-8'))
+    if args.validation_file is not None:
+        val_all_ids = ids_from_chars(tf.strings.unicode_split(val_text, 'UTF-8'))
 
     ids_dataset = tf.data.Dataset.from_tensor_slices(all_ids)
-    val_ids_dataset = tf.data.Dataset.from_tensor_slices(val_all_ids)
+    if args.validation_file is not None:
+        val_ids_dataset = tf.data.Dataset.from_tensor_slices(val_all_ids)
 
     examples_per_epoch = len(text) // (args.seq_length + 1)
 
     sequences = ids_dataset.batch(args.seq_length + 1, drop_remainder=True)
-    val_sequences = val_ids_dataset.batch(args.seq_length + 1, drop_remainder=True)
+    if args.validation_file is not None:
+        val_sequences = val_ids_dataset.batch(args.seq_length + 1, drop_remainder=True)
 
     def split_input_target(sequence):
         input_text = sequence[:-1]
@@ -98,7 +104,8 @@ def train(args):
         return input_text, target_text
 
     dataset = sequences.map(split_input_target)
-    val_dataset = val_sequences.map(split_input_target)
+    if args.validation_file is not None:
+        val_dataset = val_sequences.map(split_input_target)
 
     # Batch size
     BATCH_SIZE = 64
@@ -115,24 +122,19 @@ def train(args):
             .batch(BATCH_SIZE, drop_remainder=True)
             .prefetch(tf.data.experimental.AUTOTUNE))
 
-    val_dataset = (
-        val_dataset
-            .shuffle(BUFFER_SIZE)
-            .batch(BATCH_SIZE, drop_remainder=True)
-            .prefetch(tf.data.experimental.AUTOTUNE))
+    if args.validation_file is not None:
+        val_dataset = (
+            val_dataset
+                .shuffle(BUFFER_SIZE)
+                .batch(BATCH_SIZE, drop_remainder=True)
+                .prefetch(tf.data.experimental.AUTOTUNE))
 
     # split dataset into validation and train
     # get dataset length
 
-    dataset_length = tf.data.experimental.cardinality(dataset).numpy()
-    validation_size = int(args.validation_split * dataset_length)
-
-    #assert validation_size > 1, "dataset too small"
-
-    #train_dataset = dataset.take(dataset_length-validation_size)
     train_dataset = dataset
-    #validation_dataset = dataset.skip(dataset_length-validation_size)
-    validation_dataset = val_dataset
+    if args.validation_file is not None:
+        validation_dataset = val_dataset
 
 
     model = Model(
@@ -160,7 +162,10 @@ def train(args):
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=args.log_dir, histogram_freq=1)
 
-    history = model.fit(train_dataset, validation_data=validation_dataset, epochs=args.num_epochs, callbacks=[checkpoint_callback, epochs_stats_callback, tensorboard_callback])
+    if args.validation_file is not None:
+        history = model.fit(train_dataset, validation_data=validation_dataset, epochs=args.num_epochs, callbacks=[checkpoint_callback, epochs_stats_callback, tensorboard_callback])
+    else:
+        history = model.fit(train_dataset, epochs=args.num_epochs, callbacks=[checkpoint_callback, epochs_stats_callback, tensorboard_callback])
 
     model.summary()
 

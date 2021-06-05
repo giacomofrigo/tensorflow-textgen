@@ -36,14 +36,20 @@ class EpochsStatsCallback(tf.keras.callbacks.Callback):
 
         result = tf.strings.join(result)
 
-        self.result_to_save[epoch] = ({
-            "loss": logs["loss"],
-            "accuracy": logs["accuracy"],
-            "val_loss": logs["val_loss"],
-            "val_accuracy": logs["val_accuracy"],
-            "text": result[0].numpy().decode('utf-8')
-        })
-
+        if self.config['val_file'] is not None:
+            self.result_to_save[epoch] = ({
+                "loss": logs["loss"],
+                "accuracy": logs["accuracy"],
+                "val_loss": logs["val_loss"],
+                "val_accuracy": logs["val_accuracy"],
+                "text": result[0].numpy().decode('utf-8')
+            })
+        else:
+            self.result_to_save[epoch] = ({
+                "loss": logs["loss"],
+                "accuracy": logs["accuracy"],
+                "text": result[0].numpy().decode('utf-8')
+            })
     def on_train_end(self, logs=None):
 
         with open(os.path.join(self.save_dir, "result.json"), "w") as evolution_file:
