@@ -99,3 +99,14 @@ optional arguments:
                         sampling temperature (default: 1)
                         
 ```
+
+## tensorboard 
+In order to run tensorboard, from inside the docker container run:
+```
+tensorboard --logdir %save_dir% --bind_all
+```
+Passing as `%save_dir$` the save directory of the trained model. 
+
+
+
+
