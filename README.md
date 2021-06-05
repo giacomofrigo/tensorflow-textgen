@@ -3,7 +3,7 @@ This is char recurrent nueral network which tries to learn to generate character
 
 This project was initially developed as part of the Intelligent System and Pattern Recognition course's exam @ University of Pisa.
 
-The code is based on the Tensorflow tutorial on text generation.
+The code is based on the [Tensorflow tutorial](https://www.tensorflow.org/text/tutorials/text_generation) on text generation.
 
 ## usage
 I developed and tested the network using the official Tensorflow with GPU docker environment ([link](https://hub.docker.com/r/tensorflow/tensorflow/)) with **tensorflow 2.5** 
