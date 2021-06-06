@@ -6,7 +6,7 @@ This project was initially developed as part of the Intelligent System and Patte
 The code is based on the [Tensorflow tutorial](https://www.tensorflow.org/text/tutorials/text_generation) on text generation.
 
 ## usage
-I developed and tested the network using the official Tensorflow with GPU docker environment ([link](https://hub.docker.com/r/tensorflow/tensorflow/)) with **tensorflow 2.5**. * At this moment the Tensorflow docker image for GPU is available only for Linux*. See the link reported above for further details.
+I developed and tested the network using the official Tensorflow with GPU docker environment ([link](https://hub.docker.com/r/tensorflow/tensorflow/)) with **tensorflow 2.5**. *At this moment the Tensorflow docker image for GPU is available only for Linux*. See the link reported above for further details.
 
 In order to run the scripts, download the repo:
 ```
